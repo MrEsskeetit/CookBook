@@ -1,31 +1,22 @@
 package com.example.cookbook
 
 import android.os.Bundle
-import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.RatingBar
+import android.widget.TextView
+import androidx.fragment.app.Fragment
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 
-// TODO: Rename parameter arguments, choose names that match
-// the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
-private const val ARG_PARAM1 = "param1"
-private const val ARG_PARAM2 = "param2"
-
-/**
- * A simple [Fragment] subclass.
- * Use the [RecipeDetailsFragment.newInstance] factory method to
- * create an instance of this fragment.
- */
 class RecipeDetailsFragment : Fragment() {
-    // TODO: Rename and change types of parameters
-    private var param1: String? = null
-    private var param2: String? = null
+    private var recipe: Recipe? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         arguments?.let {
-            param1 = it.getString(ARG_PARAM1)
-            param2 = it.getString(ARG_PARAM2)
+            recipe = Gson().fromJson(it.getString("recipe"), Recipe::class.java)
         }
     }
 
@@ -33,27 +24,45 @@ class RecipeDetailsFragment : Fragment() {
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        // Inflate the layout for this fragment
-        return inflater.inflate(R.layout.fragment_recipe_details, container, false)
+        val view = inflater.inflate(R.layout.fragment_recipe_details, container, false)
+
+        val nameTextView = view.findViewById<TextView>(R.id.textViewName)
+        val ingredientsTextView = view.findViewById<TextView>(R.id.textViewIngredients)
+        val instructionsTextView = view.findViewById<TextView>(R.id.textViewInstructions)
+        val ratingBar = view.findViewById<RatingBar>(R.id.ratingBar)
+
+        recipe?.let {
+            nameTextView.text = it.name
+            ingredientsTextView.text = it.ingredients
+            instructionsTextView.text = it.instructions
+            ratingBar.rating = it.rating
+        }
+
+        ratingBar.setOnRatingBarChangeListener { _, rating, _ ->
+            recipe?.rating = rating
+            saveUpdatedRecipe()
+        }
+
+        return view
+    }
+
+    private fun saveUpdatedRecipe() {
+        val sharedPreferences = requireActivity().getSharedPreferences("recipes", Context.MODE_PRIVATE)
+        val json = sharedPreferences.getString("recipe_list", "[]")
+        val type = object : TypeToken<MutableList<Recipe>>() {}.type
+        val recipeList: MutableList<Recipe> = Gson().fromJson(json, type) ?: mutableListOf()
+
+        recipeList.find { it.name == recipe?.name }?.rating = recipe?.rating ?: 0f
+        sharedPreferences.edit().putString("recipe_list", Gson().toJson(recipeList)).apply()
     }
 
     companion object {
-        /**
-         * Use this factory method to create a new instance of
-         * this fragment using the provided parameters.
-         *
-         * @param param1 Parameter 1.
-         * @param param2 Parameter 2.
-         * @return A new instance of fragment RecipeDetailsFragment.
-         */
-        // TODO: Rename and change types and number of parameters
-        @JvmStatic
-        fun newInstance(param1: String, param2: String) =
-            RecipeDetailsFragment().apply {
-                arguments = Bundle().apply {
-                    putString(ARG_PARAM1, param1)
-                    putString(ARG_PARAM2, param2)
-                }
-            }
+        fun newInstance(recipe: Recipe): RecipeDetailsFragment {
+            val fragment = RecipeDetailsFragment()
+            val args = Bundle()
+            args.putString("recipe", Gson().toJson(recipe))
+            fragment.arguments = args
+            return fragment
+        }
     }
 }
