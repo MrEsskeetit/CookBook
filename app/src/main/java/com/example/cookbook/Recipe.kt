@@ -1,9 +1,8 @@
-package com.example.cookbook
+package com.example.mycookbook
 
 data class Recipe(
     var name: String,
     var ingredients: String,
     var instructions: String,
-    var rating: Float,
-    var imageUri: String?
+    var rating: Float
 )
